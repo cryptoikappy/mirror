@@ -436,7 +436,7 @@
             try {
                 // 画像生成
                 const imgRes = await apiRequest(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image:generateContent?key=${GEMINI_API_KEY}`,
                     {
                         contents: [{
                             parts: [
