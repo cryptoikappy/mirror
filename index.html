@@ -173,7 +173,6 @@
 <body class="flex flex-col items-center py-8 px-4">
     <div class="stars-container" id="stars"></div>
 
-    <!-- 同意モーダル -->
     <div id="termsModal" class="modal-overlay">
         <div class="terms-box space-y-6">
             <h2 class="ancient-title text-3xl text-center font-black">鏡の誓約</h2>
@@ -199,7 +198,6 @@
             <p class="text-yellow-700 font-bold text-[11px] tracking-[0.3em] uppercase">Mirror of Eternal Truth</p>
         </header>
 
-        <!-- セットアップ画面 -->
         <div id="setupView" class="space-y-10 p-8 border border-yellow-900/30 bg-black/50 backdrop-blur-xl rounded-2xl shadow-2xl">
             <div class="mirror-container">
                 <div id="aura" class="aura-effect"></div>
@@ -224,7 +222,6 @@
             </div>
         </div>
 
-        <!-- ローディング画面 -->
         <div id="loadingView" class="hidden py-24 space-y-10 relative">
             <div class="relative w-20 h-20 mx-auto">
                 <div class="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
@@ -237,7 +234,6 @@
             </div>
         </div>
 
-        <!-- 結果表示画面 -->
         <div id="resultView" class="hidden space-y-8">
             <div class="card-wrapper">
                 <div id="captureArea" class="card-ratio rarity-normal">
@@ -282,7 +278,6 @@
         </div>
     </div>
 
-    <!-- 保存用オーバーレイ -->
     <div id="saveModal" class="fixed inset-0 bg-black/98 z-[10000] hidden flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
         <p class="text-yellow-500 font-black text-sm mb-6 animate-bounce tracking-widest">【 画像を長押しで保存せよ 】</p>
         <div id="savedContainer" class="rounded-xl overflow-hidden border-4 border-yellow-600 shadow-2xl bg-black max-w-[90vw]"></div>
@@ -290,14 +285,8 @@
     </div>
 
     <script>
-        // ============================================================
-        // ★★★ ここにあなたのGemini APIキーを貼り付けてください ★★★
-        const GEMINI_API_KEY = "AIzaSyBaVzKCeVWmP-UKXE6IZafFmQpGV3RXZW0";
-        // ============================================================
-
-        // ★ Xシェア時のハッシュタグとURLをカスタマイズ
         const SHARE_HASHTAG = "真実の鏡ジェネレーター";
-        const SHARE_URL = "https://cryptoikappy.github.io/mirror/"; // 公開後にあなたのGitHub PagesのURLを入れてください例: "https://yourid.github.io/mirror/"
+        const SHARE_URL = "https://mirror-eta-three.vercel.app/";
 
         const el = {
             stars: document.getElementById('stars'),
@@ -333,10 +322,10 @@
             "素晴らしい供物だ...", "精霊が静かに共鳴している", "新たな絆が今、形を成す...",
             "鏡の精霊が目覚めた！", "魂の鼓動が聞こえる...", "深淵から優しき力が溢れ出す"
         ];
+
         let praiseTimer;
         let sourceBase64 = null;
 
-        // 星を生成
         for (let i = 0; i < 60; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -347,18 +336,21 @@
             el.stars.appendChild(star);
         }
 
-        // 同意ボタン
         el.agreeBtn.onclick = () => {
             el.termsModal.style.display = 'none';
         };
 
-        // 画像アップロード
         el.imageInput.onchange = (e) => {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
             reader.onload = () => {
-                sourceBase64 = reader.result.split(',')[1];
+                const result = reader.result;
+                if (typeof result !== 'string') return;
+
+                const parts = result.split(',');
+                sourceBase64 = parts[1] || null;
                 el.aura.style.opacity = "0.8";
                 el.guideText.innerHTML = "<span class='text-white'>供物が捧げられた ✓</span>";
             };
@@ -378,6 +370,7 @@
 
         function resetToTop() {
             sourceBase64 = null;
+            el.imageInput.value = '';
             el.nameInput.value = '';
             el.aura.style.opacity = "0";
             el.guideText.innerHTML = "ここをタップして<br>供物を捧げてください";
@@ -387,6 +380,7 @@
             el.barAtk.style.width = '0%';
             el.barMag.style.width = '0%';
             el.captureArea.className = 'card-ratio rarity-normal';
+            el.resultImage.src = '';
             clearInterval(praiseTimer);
         }
 
@@ -399,106 +393,85 @@
         }
 
         async function apiRequest(body) {
-  for (let i = 0; i < 5; i++) {
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const res = await fetch('/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
 
-      if (res.ok) return await res.json();
+                    const data = await res.json().catch(() => ({}));
 
-      const errText = await res.text();
-      console.error("API error:", res.status, errText);
-      throw new Error("API request failed: " + res.status);
-    } catch (e) {
-      if (i === 4) throw e;
-    }
+                    if (!res.ok) {
+                        throw new Error(data.error || `API request failed: ${res.status}`);
+                    }
 
-    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-  }
-
-  throw new Error("Connection failed after retries");
-}
+                    return data;
+                } catch (e) {
+                    if (i === 2) throw e;
+                    await new Promise(r => setTimeout(r, (i + 1) * 1200));
+                }
+            }
+            throw new Error("Connection failed after retries");
+        }
 
         el.genBtn.onclick = async () => {
-            if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-                alert("⚠️ index.html内の GEMINI_API_KEY を実際のキーに書き換えてください。");
+            const inputName = el.nameInput.value.trim();
+
+            if (!sourceBase64) {
+                alert("画像を選択してください。");
                 return;
             }
-            const inputName = el.nameInput.value.trim();
-            if (!sourceBase64) { alert("画像を選択してください。"); return; }
-            if (!inputName)    { alert("真名を入力してください。"); return; }
+
+            if (!inputName) {
+                alert("真名を入力してください。");
+                return;
+            }
 
             const rarityInfo = lotteryRarity();
+
             el.setupView.classList.add('hidden');
             el.loadingView.classList.remove('hidden');
             el.genBtn.disabled = true;
             startPraising();
 
             try {
-                // 画像生成
-                const imgRes = await apiRequest(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image:generateContent?key=${GEMINI_API_KEY}`,
-                    {
-                        contents: [{
-                            parts: [
-                                { text: `A magical and positive TCG card illustration for "${inputName}".
-- Character: A cute, friendly, and mysterious guardian creature (familiar/pet) inspired by the colors and visual elements of the provided image.
-- Aesthetic: The creature should be charming and lovable, like a "yuru-chara" or a magical pet mascot. Simplified cute face (e.g., small shining eyes, gentle smile).
-- Background: A magnificent, beautiful, and epic fantasy scenery (e.g., a garden of floating crystals, a serene starlit forest, or a golden ethereal library).
-- Art Style: Character is clean 2D anime cel-shaded style. Background is high-detail cinematic realistic fantasy.
-- Constraint: No violence, no horror, no dark symbols, no text. Focus on magical companionship and wonder.` },
-                                { inlineData: { mimeType: "image/jpeg", data: sourceBase64 } }
-                            ]
-                        }],
-                        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-                    }
-                );
+                const imgRes = await apiRequest({
+                    task: "image",
+                    inputName,
+                    sourceBase64
+                });
 
-                const genB64 = imgRes.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                if (!genB64) throw new Error("Image generation failed - no image in response");
-                el.resultImage.src = `data:image/png;base64,${genB64}`;
+                if (!imgRes.imageBase64) {
+                    throw new Error("画像生成に失敗しました。");
+                }
 
-                // テキスト生成
-                const txtRes = await apiRequest(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-                    {
-                        contents: [{
-                            parts: [{ text: `Create positive and fun RPG attributes for a magical guardian pet named "${inputName}".
-- New Name (Friendly/Cute fantasy name, Japanese, max 10 chars)
-- Lore (Gentle, mysterious, or slightly funny description, Japanese, max 40 chars)
-- ATK/MAG (Integer between ${rarityInfo.min} and ${rarityInfo.max})
-Respond ONLY with valid JSON, no markdown, no explanation.` }]
-                        }],
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            responseSchema: {
-                                type: "OBJECT",
-                                properties: {
-                                    name: { type: "STRING" },
-                                    desc: { type: "STRING" },
-                                    atk:  { type: "NUMBER" },
-                                    mag:  { type: "NUMBER" }
-                                },
-                                required: ["name", "desc", "atk", "mag"]
-                            }
-                        }
-                    }
-                );
+                el.resultImage.src = `data:image/png;base64,${imgRes.imageBase64}`;
 
-                const raw = txtRes.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                const data = JSON.parse(raw.replace(/```json|```/g, '').trim());
+                const txtRes = await apiRequest({
+                    task: "text",
+                    inputName,
+                    rarityInfo
+                });
+
+                const data = txtRes.data || {};
 
                 el.displayCardName.innerText = data.name || inputName;
                 el.displayDescription.innerText = data.desc || '謎めいた精霊の気配を纏う存在。';
                 el.valAtk.innerText = data.atk || rarityInfo.min;
                 el.valMag.innerText = data.mag || rarityInfo.min;
+
                 el.rarityTag.innerText = rarityInfo.type;
                 el.captureArea.className = `card-ratio rarity-${rarityInfo.type.toLowerCase()}`;
 
-                const rColors = { 'LEGEND': '#ffae00', 'EPIC': '#a335ee', 'RARE': '#0070dd', 'NORMAL': '#ffffff' };
+                const rColors = {
+                    LEGEND: '#ffae00',
+                    EPIC: '#a335ee',
+                    RARE: '#0070dd',
+                    NORMAL: '#ffffff'
+                };
+
                 el.rarityTag.style.color = rColors[rarityInfo.type];
                 el.rarityTag.style.borderColor = rColors[rarityInfo.type];
 
@@ -507,21 +480,20 @@ Respond ONLY with valid JSON, no markdown, no explanation.` }]
                 el.resultView.classList.remove('hidden');
 
                 setTimeout(() => {
-                    el.barAtk.style.width = (data.atk / 9999 * 100) + '%';
-                    el.barMag.style.width = (data.mag / 9999 * 100) + '%';
+                    el.barAtk.style.width = (Number(el.valAtk.innerText) / 9999 * 100) + '%';
+                    el.barMag.style.width = (Number(el.valMag.innerText) / 9999 * 100) + '%';
                 }, 400);
 
             } catch (e) {
                 console.error(e);
                 clearInterval(praiseTimer);
-                alert("鏡の調子が良くないようです。\n\n【確認】\n・APIキーは正しいですか？\n・Gemini APIが有効ですか？\n\nもう一度試みてください。");
+                alert("鏡の調子が良くないようです。\n\nもう一度試してみてください。");
                 resetToTop();
             } finally {
                 el.genBtn.disabled = false;
             }
         };
 
-        // 保存ボタン
         el.saveBtn.onclick = async () => {
             const BORDER = 8, W = 300, H = 447, IW = W - BORDER * 2, IH = H - BORDER * 2, IMG_H = 270, SCALE = 2;
             const rType = el.rarityTag.innerText;
@@ -529,46 +501,68 @@ Respond ONLY with valid JSON, no markdown, no explanation.` }]
             const borderColor = { 'LEGEND': '#d4af37', 'EPIC': '#6a008d', 'RARE': '#005a8d', 'NORMAL': '#3d2b1f' }[rType] || '#3d2b1f';
 
             const canvas = document.createElement('canvas');
-            canvas.width = W * SCALE; canvas.height = H * SCALE;
+            canvas.width = W * SCALE;
+            canvas.height = H * SCALE;
             const ctx = canvas.getContext('2d');
             ctx.scale(SCALE, SCALE);
 
-            ctx.fillStyle = borderColor; ctx.fillRect(0, 0, W, H);
-            ctx.fillStyle = '#000'; ctx.fillRect(BORDER, BORDER, IW, IH);
+            ctx.fillStyle = borderColor;
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(BORDER, BORDER, IW, IH);
 
             const img = el.resultImage;
             if (img.complete && img.naturalWidth > 0) {
                 const s = Math.max(IW / img.naturalWidth, IMG_H / img.naturalHeight);
-                const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
-                ctx.save(); ctx.beginPath(); ctx.rect(BORDER, BORDER, IW, IMG_H); ctx.clip();
-                ctx.drawImage(img, BORDER + (IW - dw) / 2, BORDER + (IMG_H - dh) / 2, dw, dh); ctx.restore();
+                const dw = img.naturalWidth * s;
+                const dh = img.naturalHeight * s;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(BORDER, BORDER, IW, IMG_H);
+                ctx.clip();
+                ctx.drawImage(img, BORDER + (IW - dw) / 2, BORDER + (IMG_H - dh) / 2, dw, dh);
+                ctx.restore();
             }
 
-            // レアリティタグ
             ctx.save();
             ctx.font = 'bold 11px sans-serif';
             const tagText = rType;
             const tagW = ctx.measureText(tagText).width + 20;
             const tagX = W - tagW - 10;
-            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(tagX, 12, tagW, 18);
-            ctx.strokeStyle = rColors[rType]; ctx.lineWidth = 1; ctx.strokeRect(tagX, 12, tagW, 18);
-            ctx.fillStyle = rColors[rType]; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(tagX, 12, tagW, 18);
+            ctx.strokeStyle = rColors[rType];
+            ctx.lineWidth = 1;
+            ctx.strokeRect(tagX, 12, tagW, 18);
+            ctx.fillStyle = rColors[rType];
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
             ctx.fillText(tagText, tagX + tagW / 2, 21);
             ctx.restore();
 
             const ty = BORDER + IMG_H;
-            ctx.fillStyle = '#080808'; ctx.fillRect(BORDER, ty, IW, IH - IMG_H);
-            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = '#080808';
+            ctx.fillRect(BORDER, ty, IW, IH - IMG_H);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
             ctx.fillText(el.displayCardName.innerText, BORDER + 15, ty + 25);
 
-            ctx.fillStyle = '#a1a1aa'; ctx.font = '10px serif';
+            ctx.fillStyle = '#a1a1aa';
+            ctx.font = '10px serif';
             const desc = el.displayDescription.innerText;
             let currentLine = '', lineY = ty + 45;
-            for (let char of desc) {
+
+            for (const char of desc) {
                 if (ctx.measureText(currentLine + char).width > IW - 30) {
                     ctx.fillText(currentLine, BORDER + 15, lineY);
-                    currentLine = char; lineY += 14;
-                } else { currentLine += char; }
+                    currentLine = char;
+                    lineY += 14;
+                } else {
+                    currentLine += char;
+                }
             }
             ctx.fillText(currentLine, BORDER + 15, lineY);
 
@@ -576,24 +570,29 @@ Respond ONLY with valid JSON, no markdown, no explanation.` }]
             const barWidth = (IW - 40) / 2;
             ctx.font = 'bold 8px sans-serif';
 
-            ctx.fillStyle = '#555'; ctx.textAlign = 'left';
+            ctx.fillStyle = '#555';
+            ctx.textAlign = 'left';
             ctx.fillText('ATK', BORDER + 15, statusStartY);
             ctx.textAlign = 'right';
             ctx.fillText(el.valAtk.innerText, BORDER + 15 + barWidth, statusStartY);
-            ctx.fillStyle = '#222'; ctx.fillRect(BORDER + 15, statusStartY + 4, barWidth, 4);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(BORDER + 15, statusStartY + 4, barWidth, 4);
             ctx.fillStyle = '#cc0000';
-            ctx.fillRect(BORDER + 15, statusStartY + 4, (parseInt(el.valAtk.innerText) / 9999) * barWidth, 4);
+            ctx.fillRect(BORDER + 15, statusStartY + 4, (parseInt(el.valAtk.innerText, 10) / 9999) * barWidth, 4);
 
-            ctx.fillStyle = '#555'; ctx.textAlign = 'left';
+            ctx.fillStyle = '#555';
+            ctx.textAlign = 'left';
             ctx.fillText('MAG', BORDER + 25 + barWidth, statusStartY);
             ctx.textAlign = 'right';
             ctx.fillText(el.valMag.innerText, BORDER + 25 + barWidth * 2, statusStartY);
-            ctx.fillStyle = '#222'; ctx.fillRect(BORDER + 25 + barWidth, statusStartY + 4, barWidth, 4);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(BORDER + 25 + barWidth, statusStartY + 4, barWidth, 4);
             ctx.fillStyle = '#0000cc';
-            ctx.fillRect(BORDER + 25 + barWidth, statusStartY + 4, (parseInt(el.valMag.innerText) / 9999) * barWidth, 4);
+            ctx.fillRect(BORDER + 25 + barWidth, statusStartY + 4, (parseInt(el.valMag.innerText, 10) / 9999) * barWidth, 4);
 
-            // ハッシュタグ透かし
-            ctx.fillStyle = 'rgba(212,175,55,0.25)'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(212,175,55,0.25)';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
             ctx.fillText(`#${SHARE_HASHTAG}`, W / 2, H - 8);
 
             const dataUrl = canvas.toDataURL("image/png");
