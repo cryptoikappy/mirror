@@ -398,25 +398,29 @@
             return { type: 'NORMAL', min: 500, max: 3000 };
         }
 
-        async function apiRequest(url, body) {
-            for (let i = 0; i < 5; i++) {
-                try {
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    });
-                    if (res.ok) return await res.json();
-                    const errText = await res.text();
-                    console.error("API error:", res.status, errText);
-                    if (res.status === 400 || res.status === 403) throw new Error("API key error: " + res.status);
-                } catch (e) {
-                    if (e.message.includes("API key")) throw e;
-                }
-                await new Promise(r => setTimeout(r, Math.pow(2, i) * 3000));
-            }
-            throw new Error("Connection failed after retries");
-        }
+        async function apiRequest(body) {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) return await res.json();
+
+      const errText = await res.text();
+      console.error("API error:", res.status, errText);
+      throw new Error("API request failed: " + res.status);
+    } catch (e) {
+      if (i === 4) throw e;
+    }
+
+    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+  }
+
+  throw new Error("Connection failed after retries");
+}
 
         el.genBtn.onclick = async () => {
             if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
