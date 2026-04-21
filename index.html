@@ -393,6 +393,23 @@
         }
 
         async function apiRequest(body) {
+    const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        if (res.status === 429) {
+            throw new Error('混み合っています。少し時間をおいて1回だけ試してください。');
+        }
+        throw new Error(data.error || `API request failed: ${res.status}`);
+    }
+
+    return data;
+}
             for (let i = 0; i < 3; i++) {
                 try {
                     const res = await fetch('/api/generate', {
