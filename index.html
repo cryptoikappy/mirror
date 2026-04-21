@@ -413,7 +413,7 @@
                 } catch (e) {
                     if (e.message.includes("API key")) throw e;
                 }
-                await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                await new Promise(r => setTimeout(r, Math.pow(2, i) * 3000));
             }
             throw new Error("Connection failed after retries");
         }
